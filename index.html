@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gênio Criativo - Gerador de Roteiro e Storyboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        p.subtitle {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #1a73e8;
+            color: #fff;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        button:hover:enabled {
+            background-color: #155bb5;
+        }
+        .message-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+        }
+        .loading-message {
+            background-color: #e3f2fd;
+            color: #1a73e8;
+            display: block;
+        }
+        .error-message {
+            background-color: #fbecec;
+            color: #c53929;
+            display: block;
+        }
+        .result-container {
+            margin-top: 40px;
+            text-align: left;
+        }
+        .scene {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        .scene img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: block;
+        }
+        .scene h3 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .scene p {
+            margin: 8px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Gênio Criativo</h1>
+        <p class="subtitle">Transforme suas ideias em roteiros e storyboards de vídeo em segundos.</p>
+
+        <form id="generation-form">
+            <input type="text" id="idea-input" placeholder="Sua ideia (ex: uma pequena empresa usando um drone)" required>
+            <input type="number" id="duration-input" placeholder="Duração do vídeo (em segundos)" min="5" max="300" required>
+            <button type="submit" id="generate-button">Gerar Roteiro e Storyboard</button>
+        </form>
+
+        <div id="message-container" class="message-box"></div>
+
+        <div id="result-container" class="result-container" style="display:none;">
+            <h2>Seu Roteiro está Pronto!</h2>
+            <div id="script-content"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('generation-form');
+            const ideaInput = document.getElementById('idea-input');
+            const durationInput = document.getElementById('duration-input');
+            const generateButton = document.getElementById('generate-button');
+            const messageContainer = document.getElementById('message-container');
+            const resultContainer = document.getElementById('result-container');
+            const scriptContent = document.getElementById('script-content');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // 1. Desabilitar o botão e mostrar mensagem de carregamento
+                generateButton.disabled = true;
+                messageContainer.className = 'message-box loading-message';
+                messageContainer.textContent = 'Gerando seu roteiro e storyboards. Pode demorar alguns segundos...';
+                resultContainer.style.display = 'none';
+
+                const idea = ideaInput.value;
+                const duration = durationInput.value;
+
+                try {
+                    // 2. Fazer a requisição para o backend
+                    const response = await fetch('/.netlify/functions/api', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ idea, duration }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        // 3. Tratar erros do backend
+                        throw new Error(data.error || 'Ocorreu um erro no servidor.');
+                    }
+
+                    // 4. Exibir o resultado
+                    messageContainer.style.display = 'none';
+                    resultContainer.style.display = 'block';
+                    scriptContent.innerHTML = ''; // Limpar conteúdo anterior
+
+                    data.script.forEach((scene, index) => {
+                        const sceneElement = document.createElement('div');
+                        sceneElement.className = 'scene';
+                        sceneElement.innerHTML = `
+                            <h3>${scene.title} (${scene.timing})</h3>
+                            <p><strong>Descrição:</strong> ${scene.description}</p>
+                            <p><strong>Narração:</strong> ${scene.narrationScript}</p>
+                            <p><strong>Trilha Sonora:</strong> ${scene.soundtrackSuggestion}</p>
+                            <img src="${data.images[index]}" alt="Storyboard da Cena ${index + 1}">
+                        `;
+                        scriptContent.appendChild(sceneElement);
+                    });
+
+                } catch (error) {
+                    // 5. Exibir mensagens de erro
+                    messageContainer.className = 'message-box error-message';
+                    messageContainer.textContent = `Erro: ${error.message}`;
+                } finally {
+                    // 6. Reabilitar o botão
+                    generateButton.disabled = false;
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
